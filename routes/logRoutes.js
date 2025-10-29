@@ -1,3 +1,5 @@
+// routes/logRoutes.js
+
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -8,7 +10,6 @@ const { authenticateToken } = require('../middleware/auth');
 // ===================================
 
 // GET /api/logs/tasks - Fetch all active tasks for the employee dropdown
-// This endpoint is crucial for populating the task selection in the dashboard.
 router.get('/tasks', authenticateToken, async (req, res) => {
     try {
         const tasks = await db.query(
@@ -23,14 +24,11 @@ router.get('/tasks', authenticateToken, async (req, res) => {
 
 
 // GET /api/logs - Fetch the current user's daily logs
-// This is used to display the employee's log history.
 router.get('/', authenticateToken, async (req, res) => {
-    // The user_id is guaranteed to be available from the JWT payload via the authenticateToken middleware
     const user_id = req.user.user_id; 
 
     try {
         const logs = await db.query(
-            // Join the DailyLog table with the Tasks table to get the human-readable task_name
             `SELECT 
                 l.log_id, 
                 l.work_date, 
@@ -38,6 +36,7 @@ router.get('/', authenticateToken, async (req, res) => {
                 l.description, 
                 t.task_name
             FROM DailyLog l
+            JOIN Users u ON l.user_id = u.user_id
             JOIN Tasks t ON l.task_id = t.task_id
             WHERE l.user_id = $1
             ORDER BY l.work_date DESC, l.log_id DESC`,
@@ -55,9 +54,8 @@ router.get('/', authenticateToken, async (req, res) => {
 // TIME LOGGING AND UTILITY ROUTES
 // ===================================
 
-// POST /api/logs/log - Route for submitting a new time log (Implementation pending)
+// POST /api/logs/log - Route for submitting a new time log (Placeholder for now)
 router.post('/log', authenticateToken, async (req, res) => {
-    // This route will be implemented in a later step
     res.status(200).json({ message: "Time logging endpoint ready (implementation pending).", user: req.user });
 });
 
