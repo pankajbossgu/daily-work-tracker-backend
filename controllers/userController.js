@@ -1,63 +1,114 @@
 // daily-work-tracker-backend/controllers/userController.js
 
-// ... (Keep all existing imports and functions: registerUser, loginUser, etc.)
-// ...
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const db = require("../config/db");
 
-/**
- * [NEW FUNCTION] Fetches all users (ID, email, role, status) for the Admin Dashboard.
- * Requires Admin privileges.
- */
-const getAllUsers = async (req, res) => {
-    try {
-        const result = await pool.query(
-            'SELECT user_id, email, role, status FROM users ORDER BY status DESC, user_id'
-        );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'No users found.' });
-        }
+// ---------------------------------------------
+// 🟢 REGISTER USER
+// ---------------------------------------------
+exports.registerUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error('Error fetching all users for Admin:', error.stack);
-        res.status(500).json({ error: 'Internal server error while fetching users.' });
-    }
+    if (!email || !password)
+      return res.status(400).json({ error: "Email and password are required" });
+
+    const userExists = await db.query("SELECT * FROM Users WHERE email = $1", [email]);
+    if (userExists.rows.length > 0)
+      return res.status(400).json({ error: "User already exists" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await db.query(
+      "INSERT INTO Users (email, password_hash) VALUES ($1, $2) RETURNING user_id, email, role, status",
+      [email, hashedPassword]
+    );
+
+    res.status(201).json({
+      message: "User registered successfully. Awaiting admin approval.",
+      user: newUser.rows[0],
+    });
+  } catch (error) {
+    console.error("Register error:", error);
+    res.status(500).json({ error: "Server error during registration" });
+  }
 };
 
+// ---------------------------------------------
+// 🟢 LOGIN USER
+// ---------------------------------------------
+exports.loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-/**
- * [NEW FUNCTION] Updates a user's status from 'Pending' to 'Approved'.
- * Requires Admin privileges.
- */
-const approveUser = async (req, res) => {
-    const { userId } = req.params; 
+    const result = await db.query("SELECT * FROM Users WHERE email = $1", [email]);
+    if (result.rows.length === 0)
+      return res.status(401).json({ error: "Invalid credentials" });
 
-    try {
-        const result = await pool.query(
-            // Only update users whose current status is 'Pending'
-            'UPDATE users SET status = $1 WHERE user_id = $2 AND status = $3 RETURNING user_id, email, status',
-            ['Approved', userId, 'Pending']
-        );
+    const user = result.rows[0];
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch)
+      return res.status(401).json({ error: "Invalid credentials" });
 
-        if (result.rowCount === 0) {
-            return res.status(404).json({ error: 'User not found or status is not Pending.' });
-        }
+    if (user.status !== "Approved")
+      return res.status(403).json({ error: "Account not approved by admin yet" });
 
-        res.status(200).json({ 
-            message: 'User successfully approved.', 
-            user: result.rows[0] 
-        });
+    const token = jwt.sign(
+      { user_id: user.user_id, role: user.role, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "8h" }
+    );
 
-    } catch (error) {
-        console.error(`Error approving user ${userId}:`, error.stack);
-        res.status(500).json({ error: 'Internal server error during user approval.' });
-    }
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        user_id: user.user_id,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Server error during login" });
+  }
 };
 
-// ... (Keep other existing functions)
+// ---------------------------------------------
+// 🟢 ADMIN: GET ALL USERS
+// ---------------------------------------------
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await db.query(
+      "SELECT user_id, email, role, status, created_at FROM Users ORDER BY user_id ASC"
+    );
+    res.json(users.rows);
+  } catch (error) {
+    console.error("Get users error:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+};
 
-module.exports = {
-    // ... all other existing exports ...
-    getAllUsers, // <--- Add this
-    approveUser, // <--- Add this
+// ---------------------------------------------
+// 🟢 ADMIN: APPROVE USER
+// ---------------------------------------------
+exports.approveUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const result = await db.query(
+      "UPDATE Users SET status = 'Approved' WHERE user_id = $1 RETURNING user_id, email, status",
+      [userId]
+    );
+
+    if (result.rowCount === 0)
+      return res.status(404).json({ error: "User not found" });
+
+    res.json({ message: "User approved successfully", user: result.rows[0] });
+  } catch (error) {
+    console.error("Approve user error:", error);
+    res.status(500).json({ error: "Failed to approve user" });
+  }
 };
