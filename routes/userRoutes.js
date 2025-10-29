@@ -1,58 +1,47 @@
-// daily-work-tracker-backend/routes/userRoutes.js
-
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db');
 
-// ✅ Use only one auth middleware import (your existing file: auth.js)
-const { protect, isAdmin } = require('../middleware/auth');
+// Import authentication middleware
+const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
 
-// ✅ Import controller functions
-const { 
-  registerUser, 
-  loginUser, 
-  getAllUsers, 
-  approveUser 
-} = require('../controllers/userController'); 
+// Import user controller functions
+const {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  getAllUsers,
+  deleteUser,
+} = require('../controllers/userController');
 
-// ===================================
-// PUBLIC ROUTES
-// ===================================
+// =============================
+// Public Routes
+// =============================
+
+// Register a new user
 router.post('/register', registerUser);
+
+// Login user
 router.post('/login', loginUser);
 
-// ===================================
-// AUTHENTICATED USER ROUTES
-// ===================================
+// =============================
+// Protected Routes (Require Token)
+// =============================
 
-// ✅ Get current logged-in user details
-router.get('/me', protect, async (req, res) => {
-  try {
-    const userId = req.user.user_id || req.user.id;
+// Get logged-in user profile
+router.get('/profile', authenticateToken, getUserProfile);
 
-    const result = await db.query(
-      'SELECT user_id, email, role, status, created_at FROM Users WHERE user_id = $1',
-      [userId]
-    );
+// Update logged-in user profile
+router.put('/profile', authenticateToken, updateUserProfile);
 
-    if (result.rowCount === 0)
-      return res.status(404).json({ error: 'User not found' });
+// =============================
+// Admin Routes (Require Admin Role)
+// =============================
 
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Error fetching current user:', err);
-    res.status(500).json({ error: 'Failed to fetch current user' });
-  }
-});
+// Get all users
+router.get('/', authenticateToken, authorizeRoles('Admin'), getAllUsers);
 
-// ===================================
-// ADMIN ROUTES
-// ===================================
-
-// [NEW ROUTE 1] GET /api/admin/users - Fetch all users
-router.get('/admin/users', protect, isAdmin, getAllUsers);
-
-// [NEW ROUTE 2] PUT /api/admin/users/:userId/approve - Approve a specific user
-router.put('/admin/users/:userId/approve', protect, isAdmin, approveUser);
+// Delete a user (Admin only)
+router.delete('/:id', authenticateToken, authorizeRoles('Admin'), deleteUser);
 
 module.exports = router;
