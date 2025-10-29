@@ -1,35 +1,39 @@
 // daily-work-tracker-backend/middleware/auth.js
 
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
 
-// ✅ Verify if user is logged in
-function protect(req, res, next) {
+// ✅ Verify token (used for all protected routes)
+function authenticateToken(req, res, next) {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Not authorized, no token' });
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Not authorized, no token" });
   }
 
-  const token = authHeader.split(' ')[1];
+  const token = authHeader.split(" ")[1];
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (error) {
-    console.error('JWT decode error:', error);
-    res.status(401).json({ message: 'Not authorized, token failed' });
+    console.error("JWT verification failed:", error);
+    res.status(401).json({ message: "Not authorized, token invalid" });
   }
 }
 
-// ✅ Verify if user is Admin
-function isAdmin(req, res, next) {
-  if (req.user && req.user.role === 'Admin') {
+// ✅ Alias (same logic) for backward compatibility
+const protect = authenticateToken;
+
+// ✅ Role-based authorization
+function authorizeRoles(...allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({ message: "Access denied: insufficient privileges" });
+    }
     next();
-  } else {
-    res.status(403).json({ message: 'Access denied, admin only' });
-  }
+  };
 }
 
-module.exports = { protect, isAdmin };
+module.exports = { authenticateToken, protect, authorizeRoles };
