@@ -1,1 +1,16 @@
 
+{
+  "name": "daily-work-tracker-backend",
+  "version": "1.0.0",
+  "description": "API server for Daily Work Tracker app.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js" 
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.4.5"
+    // Other dependencies like 'pg' or 'mysql2' will be added later
+  }
+}
