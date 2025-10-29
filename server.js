@@ -3,7 +3,8 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3005; 
+// HARDCODED FIX: Use port 3005 to avoid conflict with React's default 3000
+const port = 3005; 
 
 const db = require('./db');
 
