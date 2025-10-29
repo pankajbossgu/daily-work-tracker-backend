@@ -1,104 +1,88 @@
 // controllers/userController.js
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const db = require('../db'); // adapt to ./config/db if you moved file
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const db = require("../db");
 
-// Register user
+// ✅ REGISTER a new user
 exports.registerUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
-    if (!name || !email || !password)
-      return res.status(400).json({ message: 'Please fill all fields' });
 
-    const existing = await db.query('SELECT user_id FROM users WHERE email = $1', [email]);
-    if (existing.rows.length > 0)
-      return res.status(400).json({ message: 'User already exists' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
 
-    const hashed = await bcrypt.hash(password, 10);
+    // Check if email already exists
+    const existingUser = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert user into database
     const result = await db.query(
-      `INSERT INTO users (name, email, password, role, status)
-       VALUES ($1, $2, $3, $4, $5) RETURNING user_id, name, email, role, status`,
-      [name, email, hashed, role || 'Employee', 'Approved'] // change default status as you prefer
+      `INSERT INTO users (name, email, password, role)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, name, email, role`,
+      [name, email, hashedPassword, role || "User"]
     );
 
-    res.status(201).json({ message: 'User registered successfully', user: result.rows[0] });
-  } catch (err) {
-    console.error('Register Error:', err);
-    res.status(500).json({ message: 'Registration failed. Please try again.' });
+    res.status(201).json({
+      message: "User registered successfully",
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error("❌ Registration error:", error.message);
+    res.status(500).json({ message: "Registration failed. Please try again." });
   }
 };
 
-// Login
+// ✅ LOGIN user
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'Provide email & password' });
 
-    const result = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-    const user = result.rows[0];
-    if (!user) return res.status(400).json({ message: 'Invalid email or password' });
+    if (!email || !password)
+      return res.status(400).json({ message: "Email and password are required" });
 
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(400).json({ message: 'Invalid email or password' });
+    const userResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
+    const user = userResult.rows[0];
 
-    if (user.status && user.status !== 'Approved' && user.status !== 'Active') {
-      return res.status(403).json({ message: 'Account not approved' });
-    }
+    if (!user) return res.status(400).json({ message: "Invalid email or password" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid email or password" });
 
     const token = jwt.sign(
-      { user_id: user.user_id, email: user.email, role: user.role },
+      { id: user.id, role: user.role, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: "8h" }
     );
 
     res.json({
-      message: 'Login successful',
+      message: "Login successful",
       token,
-      user: {
-        user_id: user.user_id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
-  } catch (err) {
-    console.error('Login Error:', err);
-    res.status(500).json({ message: 'Login failed' });
+  } catch (error) {
+    console.error("❌ Login error:", error.message);
+    res.status(500).json({ message: "Login failed. Please try again." });
   }
 };
 
-// Get profile (protected)
+// ✅ Get user profile
 exports.getUserProfile = async (req, res) => {
   try {
-    const uid = req.user.user_id || req.user.id || req.user.userId;
-    const r = await db.query('SELECT user_id, name, email, role, status FROM users WHERE user_id = $1', [uid]);
-    if (!r.rows[0]) return res.status(404).json({ message: 'User not found' });
-    res.json(r.rows[0]);
-  } catch (err) {
-    console.error('Profile Error:', err);
-    res.status(500).json({ message: 'Failed to fetch profile' });
-  }
-};
-
-// Admin: list users
-exports.getAllUsers = async (req, res) => {
-  try {
-    const r = await db.query('SELECT user_id, name, email, role, status, created_at FROM users ORDER BY user_id DESC');
-    res.json(r.rows);
-  } catch (err) {
-    console.error('GetAllUsers Error:', err);
-    res.status(500).json({ message: 'Failed to fetch users' });
-  }
-};
-
-// Admin: approve user
-exports.approveUser = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    await db.query('UPDATE users SET status = $1 WHERE user_id = $2', ['Approved', userId]);
-    res.json({ message: 'User approved' });
-  } catch (err) {
-    console.error('Approve Error:', err);
-    res.status(500).json({ message: 'Failed to approve user' });
+    const userId = req.user.id;
+    const result = await db.query(
+      "SELECT id, name, email, role FROM users WHERE id = $1",
+      [userId]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("❌ Fetch profile error:", error.message);
+    res.status(500).json({ message: "Failed to fetch profile" });
   }
 };
