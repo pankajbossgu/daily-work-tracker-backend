@@ -1,22 +1,28 @@
-// Assuming this file contains existing functions like registerUser and loginUser,
-// and imports the database connection pool (e.g., const pool = require('../db');)
+// Assuming this file contains existing imports like: 
+// const pool = require('../db'); 
+// ... and existing functions like registerUser and loginUser
 
 // ... (Keep all existing imports and functions: registerUser, loginUser, etc.)
 // ...
 
-// New function to fetch all users (for Admin Dashboard)
+/**
+ * [NEW FUNCTION] Fetches all users (ID, email, role, status) for the Admin Dashboard.
+ * Requires Admin privileges.
+ */
 const getAllUsers = async (req, res) => {
     try {
         // Query to select essential user data (excluding password hash)
+        // Ordering by status ensures 'Pending' users show up first in the list
         const result = await pool.query(
-            'SELECT user_id, email, role, status FROM users ORDER BY user_id'
+            'SELECT user_id, email, role, status FROM users ORDER BY status DESC, user_id'
         );
         
         if (result.rows.length === 0) {
+            // This is unlikely but handles an empty user table
             return res.status(404).json({ error: 'No users found.' });
         }
 
-        // Return the list of users
+        // Return the list of users to the frontend
         res.status(200).json(result.rows);
     } catch (error) {
         console.error('Error fetching all users for Admin:', error.stack);
@@ -25,22 +31,22 @@ const getAllUsers = async (req, res) => {
 };
 
 
-// New function to approve a pending user
+/**
+ * [NEW FUNCTION] Updates a user's status from 'Pending' to 'Approved'.
+ * Requires Admin privileges.
+ */
 const approveUser = async (req, res) => {
     const { userId } = req.params; // Get user_id from the URL parameter
 
-    if (!userId) {
-        return res.status(400).json({ error: 'User ID is required for approval.' });
-    }
-
     try {
         const result = await pool.query(
+            // Only update users whose current status is 'Pending'
             'UPDATE users SET status = $1 WHERE user_id = $2 AND status = $3 RETURNING user_id, email, status',
             ['Approved', userId, 'Pending']
         );
 
         if (result.rowCount === 0) {
-            // This happens if the user_id doesn't exist or if they were already Approved/Rejected
+            // This means the user was not found OR their status was not 'Pending'
             return res.status(404).json({ error: 'User not found or status is not Pending.' });
         }
 
@@ -56,10 +62,10 @@ const approveUser = async (req, res) => {
     }
 };
 
-// ... (Keep all existing exports)
+// ... (Keep other existing functions)
 
 module.exports = {
     // ... all other existing exports ...
-    getAllUsers, // EXPORT the new function
-    approveUser, // EXPORT the new function
+    getAllUsers, // <--- Add this
+    approveUser, // <--- Add this
 };
