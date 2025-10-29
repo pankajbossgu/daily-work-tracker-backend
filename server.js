@@ -7,8 +7,8 @@ require('dotenv').config(); // For loading environment variables (like API keys/
 
 // Import Routes
 const userRoutes = require('./routes/userRoutes');
-// const adminRoutes = require('./routes/adminRoutes'); // Will be added later
-// const logRoutes = require('./routes/logRoutes');     // Will be added later
+const adminRoutes = require('./routes/adminRoutes'); 
+// const logRoutes = require('./routes/logRoutes'); // Will be added in the next step!
 
 
 // 2. Define the server port
@@ -24,13 +24,15 @@ app.use(express.urlencoded({ extended: true }));
 
 // 4. API Routes Setup
 
-// User Routes: Registration and Login (from Step 5)
-// All routes defined in userRoutes.js will be accessed via /api/users/...
+// User Routes: Registration and Login
 app.use('/api/users', userRoutes); 
 
-// Future Routes (Placeholders)
-// app.use('/api/admin', adminRoutes);
-// app.use('/api/logs', logRoutes);
+// Admin Routes: Task Management and User Approval
+// Accessible via /api/admin/...
+app.use('/api/admin', adminRoutes); 
+
+// Employee Log Routes: Daily Work Submission 
+// app.use('/api/logs', logRoutes); // Will be connected after Step 7
 
 
 // 5. Basic Test Route
