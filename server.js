@@ -1,6 +1,9 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
+// NOTE: We don't need to explicitly require body-parser anymore, 
+// as express.json() handles it, but we can keep the require if needed for other uses.
+// For this fix, we are simplifying the middleware. 
+
 require('dotenv').config(); // Load environment variables
 
 const app = express();
@@ -18,9 +21,10 @@ app.use(cors({
     origin: 'http://localhost:3001' 
 }));
 
-// 2. Body Parser to handle JSON data
-app.use(bodyParser.json()); 
-app.use(express.json()); // Ensures express can read JSON bodies
+// 2. Body Parser FIX: Use ONLY express.json() to handle incoming JSON data
+// This avoids the "stream is not readable" error.
+app.use(express.json()); 
+
 
 // Basic route for health check
 app.get('/', (req, res) => {
