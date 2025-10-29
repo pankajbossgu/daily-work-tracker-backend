@@ -1,20 +1,29 @@
 // routes/logRoutes.js
-const express = require('express');
+
+const express = require("express");
 const router = express.Router();
-const { authenticateToken } = require('../middleware/auth');
-const { addLog, getUserLogs, getAllLogs, updateLog, deleteLog } = require('../controllers/logController');
+const { authenticateToken, authorizeRoles } = require("../middleware/auth");
+const {
+  addLog,
+  getUserLogs,
+  getAllLogs,
+  updateLog,
+  deleteLog,
+} = require("../controllers/logController");
 
-// create log
-router.post('/', authenticateToken, addLog);
+// 🟢 Add new log (for any logged-in user)
+router.post("/", authenticateToken, addLog);
 
-// get logged-in user's logs
-router.get('/my', authenticateToken, getUserLogs);
+// 🟢 Get logs of the logged-in user
+router.get("/my-logs", authenticateToken, getUserLogs);
 
-// admin: get all logs
-router.get('/all', authenticateToken, getAllLogs);
+// 🟣 Get all logs (Admin only)
+router.get("/", authenticateToken, authorizeRoles("Admin"), getAllLogs);
 
-// update & delete
-router.put('/:id', authenticateToken, updateLog);
-router.delete('/:id', authenticateToken, deleteLog);
+// 🟠 Update a log (logged-in user)
+router.put("/:id", authenticateToken, updateLog);
+
+// 🔴 Delete a log (logged-in user)
+router.delete("/:id", authenticateToken, deleteLog);
 
 module.exports = router;
