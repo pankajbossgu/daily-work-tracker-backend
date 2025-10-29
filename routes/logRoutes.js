@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { authenticateToken } = require('../middleware/auth'); 
+// NOTE: Assuming isAdmin middleware is imported here if you need it for admin routes
 
 // ===================================
 // EMPLOYEE DASHBOARD DATA FETCHING
@@ -34,6 +35,7 @@ router.get('/tasks', authenticateToken, async (req, res) => {
 
 // POST /api/logs/log - Submit a new work log
 router.post('/log', authenticateToken, async (req, res) => {
+    // Note: 'hours_logged' must match the column name in your Logs table
     const { task_id, hours_logged, description } = req.body;
     const user_id = req.user.user_id; // Added by authenticateToken middleware
     
@@ -62,9 +64,9 @@ router.get('/', authenticateToken, async (req, res) => {
     console.log(`--- DEBUG: User ${user_id} fetching personal log history.`);
 
     try {
-        // FIX APPLIED: Corrected the column name from 'l.hours_logged' to match 
-        // the intended column name, assuming it's 'hours_logged' in the Logs table.
-        // It is also possible the column is named 'time_spent', if so, change it here.
+        // This is the query with 'l.hours_logged' that caused the error.
+        // If your column is named differently (e.g., 'time_spent'), you MUST change 
+        // 'l.hours_logged' to that name here.
         const logs = await db.query(
             `SELECT 
                 l.log_id, 
@@ -84,9 +86,9 @@ router.get('/', authenticateToken, async (req, res) => {
 
         res.status(200).json(logs.rows);
     } catch (error) {
-        // The error indicates a column name mismatch in the database.
+        // Log the full error object for better debugging
         console.error('--- CRITICAL ERROR: Error fetching user logs:', error);
-        res.status(500).json({ error: 'Failed to fetch log history. Check if the Logs table has the column "hours_logged".' });
+        res.status(500).json({ error: 'Failed to fetch log history. Check your backend logRoutes.js file and the database schema for the column name "hours_logged".' });
     }
 });
 
