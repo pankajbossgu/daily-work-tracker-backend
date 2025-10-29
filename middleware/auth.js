@@ -1,26 +1,35 @@
-// daily-work-tracker-backend/middleware/auth.js
+// daily-work-tracker-backend/middleware/authMiddleware.js
 
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-// ✅ Middleware to authenticate user via JWT token
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+// ✅ Verify if user is logged in
+function protect(req, res, next) {
+  const authHeader = req.headers.authorization;
 
-  if (!token) {
-    return res.status(401).json({ error: 'Access denied. No token provided.' });
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      console.error('JWT verification failed:', err);
-      return res.status(403).json({ error: 'Invalid or expired token.' });
-    }
+  const token = authHeader.split(' ')[1];
 
-    req.user = user;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
     next();
-  });
+  } catch (error) {
+    console.error('JWT decode error:', error);
+    res.status(401).json({ message: 'Not authorized, token failed' });
+  }
 }
 
-module.exports = { authenticateToken };
+// ✅ Verify if user is Admin
+function isAdmin(req, res, next) {
+  if (req.user && req.user.role === 'Admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Access denied, admin only' });
+  }
+}
+
+module.exports = { protect, isAdmin };
