@@ -1,11 +1,12 @@
-// routes/adminRoutes.js
 const express = require("express");
 const router = express.Router();
-const adminController = require("../controllers/adminController"); // ✅ make sure this file exists
+const { getAllUsers, getAllLogs, updateUserRole } = require("../controllers/adminController");
+const authMiddleware = require("../middleware/authMiddleware");
+const isAdmin = require("../middleware/isAdmin");
 
-// Example admin routes (you can customize)
-router.get("/all-users", adminController.getAllUsers);
-router.get("/all-logs", adminController.getAllLogs);
-router.post("/update-user-role", adminController.updateUserRole);
+// Admin-only routes
+router.get("/users", authMiddleware, isAdmin, getAllUsers);
+router.get("/logs", authMiddleware, isAdmin, getAllLogs);
+router.put("/user/role", authMiddleware, isAdmin, updateUserRole);
 
 module.exports = router;
