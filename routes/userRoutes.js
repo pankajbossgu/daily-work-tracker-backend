@@ -1,47 +1,47 @@
-const express = require('express');
+// routes/userRoutes.js
+
+const express = require("express");
 const router = express.Router();
-
-// Import authentication middleware
-const { authenticateToken, authorizeRoles } = require('../middleware/authMiddleware');
-
-// Import user controller functions
 const {
   registerUser,
   loginUser,
   getUserProfile,
   updateUserProfile,
   getAllUsers,
-  deleteUser,
-} = require('../controllers/userController');
+} = require("../controllers/userController");
 
-// =============================
-// Public Routes
-// =============================
+// ✅ Use correct middleware file (auth.js)
+const { authenticateToken, authorizeRoles } = require("../middleware/auth");
 
-// Register a new user
-router.post('/register', registerUser);
+// ----------------------------------------
+// Public Routes (No Auth Required)
+// ----------------------------------------
 
-// Login user
-router.post('/login', loginUser);
+// User registration
+router.post("/register", registerUser);
 
-// =============================
-// Protected Routes (Require Token)
-// =============================
+// User login
+router.post("/login", loginUser);
 
-// Get logged-in user profile
-router.get('/profile', authenticateToken, getUserProfile);
+// ----------------------------------------
+// Protected Routes (Auth Required)
+// ----------------------------------------
 
-// Update logged-in user profile
-router.put('/profile', authenticateToken, updateUserProfile);
+// Get logged-in user's profile
+router.get("/me", authenticateToken, getUserProfile);
 
-// =============================
-// Admin Routes (Require Admin Role)
-// =============================
+// Update logged-in user's profile
+router.put("/me", authenticateToken, updateUserProfile);
 
-// Get all users
-router.get('/', authenticateToken, authorizeRoles('Admin'), getAllUsers);
+// ----------------------------------------
+// Admin Routes (Only accessible to Admin users)
+// ----------------------------------------
 
-// Delete a user (Admin only)
-router.delete('/:id', authenticateToken, authorizeRoles('Admin'), deleteUser);
+router.get(
+  "/admin/all",
+  authenticateToken,
+  authorizeRoles("Admin"),
+  getAllUsers
+);
 
 module.exports = router;
