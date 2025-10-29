@@ -5,7 +5,7 @@ const express = require('express');
 const { 
     registerUser, 
     loginUser, 
-    getAllUsers, 
+    getAllUsers, // <--- Add this
     approveUser // <--- Add this
 } = require('../controllers/userController'); 
 
@@ -22,12 +22,10 @@ router.post('/login', loginUser);
 // ADMIN ROUTES
 // ===================================
 
-// [NEW ROUTE 1] GET /api/admin/users - Fetch all users for management
-// Fixes the "Failed to load user data" error.
+// [NEW ROUTE 1] GET /api/admin/users - Fetch all users (Fixes "Failed to load user data")
 router.get('/admin/users', protect, isAdmin, getAllUsers);
 
 // [NEW ROUTE 2] PUT /api/admin/users/:userId/approve - Approve a specific user
-// This is the endpoint called by the "Approve" button.
 router.put('/admin/users/:userId/approve', protect, isAdmin, approveUser);
 
 
