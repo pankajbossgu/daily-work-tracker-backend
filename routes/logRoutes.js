@@ -1,39 +1,20 @@
 // routes/logRoutes.js
-
-const express = require("express");
+const express = require('express');
 const router = express.Router();
+const { authenticateToken } = require('../middleware/auth');
+const { addLog, getUserLogs, getAllLogs, updateLog, deleteLog } = require('../controllers/logController');
 
-// ✅ Import middleware correctly
-const { authenticateToken } = require("../middleware/auth");
+// create log
+router.post('/', authenticateToken, addLog);
 
-// ✅ Import controllers
-const {
-  addLog,
-  getUserLogs,
-  getAllLogs,
-  updateLog,
-  deleteLog,
-} = require("../controllers/logController");
+// get logged-in user's logs
+router.get('/my', authenticateToken, getUserLogs);
 
-// ----------------------------------------
-// Employee Routes (Authenticated users)
-// ----------------------------------------
+// admin: get all logs
+router.get('/all', authenticateToken, getAllLogs);
 
-// Add a new work log
-router.post("/", authenticateToken, addLog);
-
-// Get logged-in user's logs
-router.get("/my", authenticateToken, getUserLogs);
-
-// Update a specific log by ID
-router.put("/:id", authenticateToken, updateLog);
-
-// Delete a specific log by ID
-router.delete("/:id", authenticateToken, deleteLog);
-
-// ----------------------------------------
-// Admin Routes (View all logs)
-// ----------------------------------------
-router.get("/all", authenticateToken, getAllLogs);
+// update & delete
+router.put('/:id', authenticateToken, updateLog);
+router.delete('/:id', authenticateToken, deleteLog);
 
 module.exports = router;
