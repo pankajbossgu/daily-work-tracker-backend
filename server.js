@@ -1,16 +1,38 @@
-C:\Users\NXTLIFT\Desktop\daily-work-tracker-backend>git pull
-remote: Enumerating objects: 7, done.
-remote: Counting objects: 100% (7/7), done.
-remote: Compressing objects: 100% (4/4), done.
-remote: Total 4 (delta 3), reused 0 (delta 0), pack-reused 0 (from 0)
-Unpacking objects: 100% (4/4), 1.42 KiB | 50.00 KiB/s, done.
-From https://github.com/pankajbossgu/daily-work-tracker-backend
-   de0ee5b..a4c56dd  main       -> origin/main
-Updating de0ee5b..a4c56dd
-Fast-forward
- routes/userRoutes.js | 32 ++++++++++++++++++++++----------
- 1 file changed, 22 insertions(+), 10 deletions(-)
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+require('dotenv').config(); // Load environment variables
 
-C:\Users\NXTLIFT\Desktop\daily-work-tracker-backend>node server.js
-Server is listening on port 3000
-Successfully connected to the PostgreSQL database!
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Import database connection (to ensure it initializes)
+const db = require('./db');
+
+// Import routes
+const userRoutes = require('./routes/userRoutes');
+
+// Middleware
+// 1. Enable CORS for frontend communication (http://localhost:3001)
+app.use(cors({
+    origin: 'http://localhost:3001' 
+}));
+
+// 2. Body Parser to handle JSON data
+app.use(bodyParser.json()); 
+app.use(express.json()); // Ensures express can read JSON bodies
+
+// Basic route for health check
+app.get('/', (req, res) => {
+    res.send('Daily Work Tracker Backend API is running.');
+});
+
+// Route Handlers
+// IMPORTANT: All user routes (register, login) must start with /api/users
+app.use('/api/users', userRoutes); 
+
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Server is listening on port ${port}`);
+});
