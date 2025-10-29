@@ -11,14 +11,20 @@ const { authenticateToken } = require('../middleware/auth');
 
 // GET /api/logs/tasks - Fetch all active tasks for the employee dropdown
 router.get('/tasks', authenticateToken, async (req, res) => {
+    // --- DEBUG: Added to confirm request reaches backend ---
+    console.log('--- DEBUG: Received request for active tasks.');
+    
     try {
         const tasks = await db.query(
             'SELECT task_id, task_name FROM Tasks WHERE is_active = TRUE ORDER BY task_name'
         );
+        
+        console.log(`--- DEBUG: Successfully fetched ${tasks.rows.length} active tasks.`);
+        
         res.status(200).json(tasks.rows);
     } catch (error) {
-        console.error('Error fetching active tasks for employee dashboard:', error);
-        res.status(500).json({ error: 'Server error while fetching available tasks.' });
+        console.error('--- CRITICAL ERROR: Database error fetching active tasks:', error.message || error);
+        res.status(500).json({ error: 'Server error while fetching available tasks. Check the database logs.' });
     }
 });
 
