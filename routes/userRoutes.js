@@ -1,5 +1,5 @@
 const express = require('express');
-const router = express.Router(); // <-- This line was likely missing after the pull
+const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -8,20 +8,21 @@ const db = require('../db');
 
 // --- 1. User Registration (The Sign-Up) ---
 router.post('/register', async (req, res) => {
-    // THIS LOG MUST APPEAR IN THE BACKEND CONSOLE IF THE ROUTE IS REACHED!
+    // This log appears when registration is attempted
     console.log('--- ATTEMPTING USER REGISTRATION ---');
 
-    // Get email and password from the request body
     const { email, password } = req.body;
 
-    // Basic input validation
     if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required.' });
     }
+    
+    // Normalize email to lowercase before storage (Best Practice)
+    const normalizedEmail = email.toLowerCase(); 
 
     try {
         // 1. Check if user already exists
-        const existingUser = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        const existingUser = await db.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
         if (existingUser.rows.length > 0) {
             return res.status(400).json({ message: 'User already exists.' });
         }
@@ -33,17 +34,15 @@ router.post('/register', async (req, res) => {
         // 3. Create a new user entry
         const result = await db.query(
             'INSERT INTO users (email, password_hash, role, status) VALUES ($1, $2, $3, $4) RETURNING user_id',
-            [email, passwordHash, 'Employee', 'Pending'] // Uses correct 'status' column
+            [normalizedEmail, passwordHash, 'Employee', 'Pending'] 
         );
 
-        // Successful registration, pending approval
         res.status(201).json({ 
             message: 'Registration successful. Your account is pending Admin approval to log in.',
             user_id: result.rows[0].user_id 
         });
 
     } catch (error) {
-        // CRITICAL: Log the specific PostgreSQL error
         console.error('POSTGRES EXECUTION ERROR IN REGISTRATION:', error.message || error); 
         res.status(500).json({ message: 'Registration failed. Server error.' });
     }
@@ -52,17 +51,24 @@ router.post('/register', async (req, res) => {
 
 // --- 2. User Login (The Sign-In) ---
 router.post('/login', async (req, res) => {
+    // CRITICAL LOG: This must appear if the route is hit!
+    console.log('--- ATTEMPTING USER LOGIN ---'); 
+
     const { email, password } = req.body;
 
-    // Basic input validation
     if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required.' });
     }
 
     try {
+        // Normalize the incoming email to lowercase for reliable matching against the database
+        const normalizedEmail = email.toLowerCase(); 
+        
         // 1. Fetch user from database
-        const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        const user = await db.query('SELECT * FROM users WHERE email = $1', [normalizedEmail]);
         if (user.rows.length === 0) {
+            // Log that the email wasn't found (but don't expose this in the public message)
+            console.log(`Login failed: User not found for email ${normalizedEmail}`);
             return res.status(401).json({ message: 'Failed to login. Check credentials or approval status.' });
         }
         const userData = user.rows[0];
@@ -70,11 +76,13 @@ router.post('/login', async (req, res) => {
         // 2. Verify password
         const isPasswordValid = await bcrypt.compare(password, userData.password_hash);
         if (!isPasswordValid) {
+            console.log(`Login failed: Invalid password for user ${normalizedEmail}`);
             return res.status(401).json({ message: 'Failed to login. Check credentials or approval status.' });
         }
 
         // 3. Check for Admin Approval 
         if (userData.status !== 'Approved') { 
+            console.log(`Login failed: Account pending approval for user ${normalizedEmail}`);
             return res.status(403).json({ 
                 message: 'Access denied. Your account is pending Admin approval.' 
             });
@@ -86,6 +94,7 @@ router.post('/login', async (req, res) => {
             process.env.JWT_SECRET, 
             { expiresIn: '1d' }
         );
+        console.log(`Login successful for user ${normalizedEmail} (${userData.role})`);
 
         res.status(200).json({ 
             token, 
