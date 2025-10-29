@@ -38,7 +38,7 @@ router.post('/register', async (req, res) => {
         // 3. Create a new user entry
         const result = await client.query(
             'INSERT INTO users (email, password_hash, role, status) VALUES ($1, $2, $3, $4) RETURNING user_id',
-            [email, passwordHash, 'Employee', 'Pending'] 
+            [email, passwordHash, 'Employee', 'Pending'] // Use 'status' column
         );
 
         await client.query('COMMIT'); // Commit transaction
@@ -73,7 +73,6 @@ router.post('/login', async (req, res) => {
 
     try {
         // 1. Fetch user from database
-        // NOTE: We keep this simple query method for login for now.
         const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);
         if (user.rows.length === 0) {
             return res.status(401).json({ message: 'Failed to login. Check credentials or approval status.' });
