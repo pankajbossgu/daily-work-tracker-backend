@@ -1,6 +1,6 @@
 // controllers/logController.js
 
-const db = require("../config/db");
+const db = require("../db");
 
 // Add a new work log
 exports.addLog = async (req, res) => {
