@@ -73,8 +73,18 @@ router.post('/login', async (req, res) => {
         }
         const userData = user.rows[0];
 
+        // --- DEBUGGING LOGS ADDED HERE ---
+        console.log(`[DEBUG] Attempting login for: ${normalizedEmail}`);
+        console.log(`[DEBUG] User Role: ${userData.role}, Status: ${userData.status}`);
+        console.log(`[DEBUG] Raw Password Input: ${password}`); // CAUTION: Only for debug!
+        console.log(`[DEBUG] Stored Hash: ${userData.password_hash.substring(0, 20)}...`); 
+        // ---------------------------------
+
         // 2. Verify password
         const isPasswordValid = await bcrypt.compare(password, userData.password_hash);
+        
+        console.log(`[DEBUG] Password Match Result: ${isPasswordValid}`); // Log the comparison result!
+
         if (!isPasswordValid) {
             console.log(`Login failed: Invalid password for user ${normalizedEmail}`);
             return res.status(401).json({ message: 'Failed to login. Check credentials or approval status.' });
