@@ -1,12 +1,12 @@
 // daily-work-tracker-backend/routes/userRoutes.js
 
 const express = require('express');
-// IMPORT the new controller functions
+// UPDATE: IMPORT the new controller functions
 const { 
     registerUser, 
     loginUser, 
     getAllUsers, 
-    approveUser 
+    approveUser // <--- Add this
 } = require('../controllers/userController'); 
 
 // Assuming you have protect and isAdmin middleware in the correct path
@@ -22,11 +22,12 @@ router.post('/login', loginUser);
 // ADMIN ROUTES
 // ===================================
 
-// GET /api/admin/users - Fetch all users for management
+// [NEW ROUTE 1] GET /api/admin/users - Fetch all users for management
+// Fixes the "Failed to load user data" error.
 router.get('/admin/users', protect, isAdmin, getAllUsers);
 
-// PUT /api/admin/users/:userId/approve - Approve a specific user
-// The :userId parameter maps to req.params.userId in the controller
+// [NEW ROUTE 2] PUT /api/admin/users/:userId/approve - Approve a specific user
+// This is the endpoint called by the "Approve" button.
 router.put('/admin/users/:userId/approve', protect, isAdmin, approveUser);
 
 
