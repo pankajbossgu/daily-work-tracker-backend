@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/auth');
 const { createLog, getUserLogs } = require('../controllers/logController');
 
 // ✅ Create a new work log
