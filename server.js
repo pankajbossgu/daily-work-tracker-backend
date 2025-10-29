@@ -4,26 +4,27 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
+// ------------------ Database ------------------
+const db = require("./config/db"); // ✅ FIXED PATH
+
+// ------------------ App Initialization ------------------
 const app = express();
 const port = process.env.PORT || 3005;
-
-// ------------------ Database ------------------
-const db = require("./db");
-
-// ------------------ Route Imports ------------------
-const userRoutes = require("./routes/userRoutes");
-const logRoutes = require("./routes/logRoutes");
-const adminRoutes = require("./routes/adminRoutes");
 
 // ------------------ Middleware ------------------
 app.use(
   cors({
-    origin: "http://localhost:3000", // ✅ Match your frontend port (React)
+    origin: "http://localhost:3000", // ✅ Match your frontend React port
     credentials: true,
   })
 );
 
 app.use(express.json());
+
+// ------------------ Route Imports ------------------
+const userRoutes = require("./routes/userRoutes");
+const logRoutes = require("./routes/logRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 // ------------------ Root Route ------------------
 app.get("/", (req, res) => {
@@ -43,7 +44,7 @@ app.use("/api/admin", adminRoutes);
 
 // ------------------ Error Handling ------------------
 app.use((err, req, res, next) => {
-  console.error("Unhandled Error:", err);
+  console.error("🔥 Unhandled Error:", err);
   res.status(500).json({ error: "Internal Server Error" });
 });
 
