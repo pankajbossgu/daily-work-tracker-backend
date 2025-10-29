@@ -1,28 +1,26 @@
 // routes/userRoutes.js
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 
 const {
   registerUser,
   loginUser,
   getUserProfile,
-  updateUserProfile,
   getAllUsers,
-  deleteUser,
-} = require("../controllers/userController");
+  approveUser,
+} = require('../controllers/userController');
 
-const { authenticateToken, authorizeRoles } = require("../middleware/auth");
+const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
-// ---------------- AUTH ROUTES ----------------
-router.post("/register", registerUser);
-router.post("/login", loginUser);
+// Public
+router.post('/register', registerUser);
+router.post('/login', loginUser);
 
-// ---------------- USER PROFILE ROUTES ----------------
-router.get("/profile", authenticateToken, getUserProfile);
-router.put("/profile", authenticateToken, updateUserProfile);
+// Protected
+router.get('/me', authenticateToken, getUserProfile);
 
-// ---------------- ADMIN ROUTES ----------------
-router.get("/", authenticateToken, authorizeRoles("Admin"), getAllUsers);
-router.delete("/:id", authenticateToken, authorizeRoles("Admin"), deleteUser);
+// Admin endpoints (protect + role check)
+router.get('/admin/users', authenticateToken, authorizeRoles('Admin'), getAllUsers);
+router.put('/admin/users/:userId/approve', authenticateToken, authorizeRoles('Admin'), approveUser);
 
 module.exports = router;
