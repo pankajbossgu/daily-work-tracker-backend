@@ -1,26 +1,28 @@
 // routes/userRoutes.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const userController = require("../controllers/userController");
 
-const {
-  registerUser,
-  loginUser,
-  getUserProfile,
-  getAllUsers,
-  approveUser,
-} = require('../controllers/userController');
+// Middleware to verify JWT
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ message: "No token provided" });
 
-const { authenticateToken, authorizeRoles } = require('../middleware/auth');
+  const token = authHeader.split(" ")[1];
+  const jwt = require("jsonwebtoken");
 
-// Public
-router.post('/register', registerUser);
-router.post('/login', loginUser);
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: "Invalid token" });
+  }
+};
 
-// Protected
-router.get('/me', authenticateToken, getUserProfile);
-
-// Admin endpoints (protect + role check)
-router.get('/admin/users', authenticateToken, authorizeRoles('Admin'), getAllUsers);
-router.put('/admin/users/:userId/approve', authenticateToken, authorizeRoles('Admin'), approveUser);
+// ✅ Routes
+router.post("/register", userController.registerUser);
+router.post("/login", userController.loginUser);
+router.get("/profile", verifyToken, userController.getUserProfile);
 
 module.exports = router;
