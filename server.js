@@ -5,8 +5,8 @@ const cors = require('cors');
 require('dotenv').config(); // Load environment variables
 
 const app = express();
-// FIX APPLIED: Changed fallback port from 3000 to 3001 to match frontend proxy
-const port = process.env.PORT || 3001; 
+// FIX APPLIED: Changed fallback port to 3005. This MUST be matched in the frontend's package.json proxy.
+const port = process.env.PORT || 3005; 
 
 // Import database connection (to ensure it initializes)
 const db = require('./db');
