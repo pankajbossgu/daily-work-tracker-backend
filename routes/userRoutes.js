@@ -3,8 +3,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
-const { authenticateToken } = require('../middleware/auth');
-const { protect, isAdmin } = require('../middleware/authMiddleware');
+
+// ✅ Use only one auth middleware import (your existing file: auth.js)
+const { protect, isAdmin } = require('../middleware/auth');
 
 // ✅ Import controller functions
 const { 
@@ -25,7 +26,7 @@ router.post('/login', loginUser);
 // ===================================
 
 // ✅ Get current logged-in user details
-router.get('/me', authenticateToken, async (req, res) => {
+router.get('/me', protect, async (req, res) => {
   try {
     const userId = req.user.user_id || req.user.id;
 
