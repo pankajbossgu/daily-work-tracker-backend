@@ -1,30 +1,64 @@
-// routes/logRoutes.js
-
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-// 1. Import the middleware
 const { authenticateToken } = require('../middleware/auth'); 
 
-// ... other imports
+// ===================================
+// EMPLOYEE DASHBOARD DATA FETCHING
+// ===================================
 
-// Apply middleware to all log routes (only logged-in employees can log time)
-// Use authenticateToken to protect the POST route
-router.post('/log', authenticateToken, async (req, res) => {
-    // In this route, you can access the user ID with: req.user.user_id
-    // ... Implement logic for logging time (Next Step)
-    res.status(200).json({ message: "Time logging placeholder success", user: req.user });
-});
-
-// GET /api/log/user/123 - Example protected route to get personal logs
-router.get('/user/:userId', authenticateToken, async (req, res) => {
-    // Ensure user can only view their OWN logs (important security check)
-    if (parseInt(req.params.userId) !== req.user.user_id && req.user.role !== 'Admin') {
-        return res.status(403).json({ error: "Access denied. Cannot view other users' logs." });
+// GET /api/logs/tasks - Fetch all active tasks for the employee dropdown
+// This endpoint is crucial for populating the task selection in the dashboard.
+router.get('/tasks', authenticateToken, async (req, res) => {
+    try {
+        const tasks = await db.query(
+            'SELECT task_id, task_name FROM Tasks WHERE is_active = TRUE ORDER BY task_name'
+        );
+        res.status(200).json(tasks.rows);
+    } catch (error) {
+        console.error('Error fetching active tasks for employee dashboard:', error);
+        res.status(500).json({ error: 'Server error while fetching available tasks.' });
     }
-    // Placeholder success response
-    res.status(200).json({ message: "Fetch user logs placeholder success", user: req.user });
 });
 
+
+// GET /api/logs - Fetch the current user's daily logs
+// This is used to display the employee's log history.
+router.get('/', authenticateToken, async (req, res) => {
+    // The user_id is guaranteed to be available from the JWT payload via the authenticateToken middleware
+    const user_id = req.user.user_id; 
+
+    try {
+        const logs = await db.query(
+            // Join the DailyLog table with the Tasks table to get the human-readable task_name
+            `SELECT 
+                l.log_id, 
+                l.work_date, 
+                l.hours_logged, 
+                l.description, 
+                t.task_name
+            FROM DailyLog l
+            JOIN Tasks t ON l.task_id = t.task_id
+            WHERE l.user_id = $1
+            ORDER BY l.work_date DESC, l.log_id DESC`,
+            [user_id]
+        );
+        res.status(200).json(logs.rows);
+    } catch (error) {
+        console.error('Error fetching user logs:', error);
+        res.status(500).json({ error: 'Server error while fetching your daily logs.' });
+    }
+});
+
+
+// ===================================
+// TIME LOGGING AND UTILITY ROUTES
+// ===================================
+
+// POST /api/logs/log - Route for submitting a new time log (Implementation pending)
+router.post('/log', authenticateToken, async (req, res) => {
+    // This route will be implemented in a later step
+    res.status(200).json({ message: "Time logging endpoint ready (implementation pending).", user: req.user });
+});
 
 module.exports = router;
