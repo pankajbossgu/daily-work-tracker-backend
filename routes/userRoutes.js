@@ -1,7 +1,6 @@
-// daily-work-tracker-backend/routes/userRoutes.js
-
 const express = require("express");
 const router = express.Router();
+
 const {
   registerUser,
   loginUser,
@@ -10,7 +9,8 @@ const {
   getAllUsers,
   deleteUser,
 } = require("../controllers/userController");
-const { authenticateToken, authorizeAdmin } = require("../middleware/authMiddleware");
+
+const { authenticateToken, authorizeRoles } = require("../middleware/auth");
 
 // ---------------- AUTH ROUTES ----------------
 router.post("/register", registerUser);
@@ -21,7 +21,7 @@ router.get("/profile", authenticateToken, getUserProfile);
 router.put("/profile", authenticateToken, updateUserProfile);
 
 // ---------------- ADMIN ROUTES ----------------
-router.get("/", authenticateToken, authorizeAdmin, getAllUsers);
-router.delete("/:id", authenticateToken, authorizeAdmin, deleteUser);
+router.get("/", authenticateToken, authorizeRoles("Admin"), getAllUsers);
+router.delete("/:id", authenticateToken, authorizeRoles("Admin"), deleteUser);
 
 module.exports = router;
