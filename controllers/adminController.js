@@ -1,5 +1,5 @@
 // controllers/adminController.js
-const db = require("../config/db");
+const db = require("../db");
 
 // ✅ Get all users
 exports.getAllUsers = async (req, res) => {
