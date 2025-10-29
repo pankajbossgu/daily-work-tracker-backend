@@ -2,41 +2,50 @@
 
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
-// NOTE: Database connection (db) and helper functions (e.g., hashPassword, generateToken)
-// will be imported or defined here when you start local development.
-// For now, these are placeholder comments.
+// Import the database connection established in db.js
+const db = require('../db'); 
 
 // --- 1. User Registration (The Sign-Up) ---
 router.post('/register', async (req, res) => {
     // Get email and password from the request body
     const { email, password } = req.body;
 
+    // Basic input validation
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required.' });
+    }
+
     try {
-        // 1. Check if user already exists (DB Interaction Placeholder)
-        // const existingUser = await db.query('SELECT * FROM Users WHERE email = $1', [email]);
-        // if (existingUser.rows.length > 0) {
-        //     return res.status(400).json({ message: 'User already exists.' });
-        // }
+        // 1. Check if user already exists
+        const existingUser = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (existingUser.rows.length > 0) {
+            return res.status(400).json({ message: 'User already exists.' });
+        }
 
-        // 2. Hash the password (Security Placeholder)
-        // const passwordHash = await hashPassword(password);
+        // 2. Hash the password
+        const saltRounds = 10;
+        const passwordHash = await bcrypt.hash(password, saltRounds);
 
-        // 3. Create a new user entry in the Users table (DB Interaction Placeholder)
-        // IMPORTANT: Set initial status to 'Pending' and role to 'Employee'
-        // await db.query(
-        //     'INSERT INTO Users (email, password_hash, role, status) VALUES ($1, $2, $3, $4)', 
-        //     [email, passwordHash, 'Employee', 'Pending'] 
-        // );
+        // 3. Create a new user entry
+        // Default role is 'Employee', default status is 'Pending'
+        const result = await db.query(
+            'INSERT INTO users (email, password_hash, role, status) VALUES ($1, $2, $3, $4) RETURNING user_id',
+            [email, passwordHash, 'Employee', 'Pending']
+        );
 
-        // Successful registration, but pending approval
+        // Successful registration, pending approval
         res.status(201).json({ 
-            message: 'Registration successful. Awaiting Admin approval to log in.' 
+            message: 'Registration successful. Your account is pending Admin approval to log in.',
+            user_id: result.rows[0].user_id 
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error during registration.' });
+        // Log the specific PostgreSQL error for debugging (CRITICAL STEP)
+        console.error('POSTGRES EXECUTION ERROR IN REGISTRATION:', error); 
+        res.status(500).json({ message: 'Registration failed. Server error.' });
     }
 });
 
@@ -45,38 +54,69 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
-    try {
-        // 1. Fetch user from database (DB Interaction Placeholder)
-        // const user = await db.query('SELECT * FROM Users WHERE email = $1', [email]);
-        // if (user.rows.length === 0) {
-        //     return res.status(401).json({ message: 'Invalid credentials.' });
-        // }
-        // const userData = user.rows[0];
+    // Basic input validation
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required.' });
+    }
 
-        // 2. Verify password (Security Placeholder)
-        // const isPasswordValid = await comparePassword(password, userData.password_hash);
-        // if (!isPasswordValid) {
-        //     return res.status(401).json({ message: 'Invalid credentials.' });
-        // }
+    try {
+        // 1. Fetch user from database
+        const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (user.rows.length === 0) {
+            return res.status(401).json({ message: 'Failed to login. Check credentials or approval status.' });
+        }
+        const userData = user.rows[0];
+
+        // 2. Verify password
+        const isPasswordValid = await bcrypt.compare(password, userData.password_hash);
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'Failed to login. Check credentials or approval status.' });
+        }
 
         // 3. Check for Admin Approval (YOUR CORE REQUIREMENT)
-        // if (userData.status !== 'Approved') {
-        //     return res.status(403).json({ 
-        //         message: 'Access denied. Your account is pending Admin approval.' 
-        //     });
-        // }
+        if (userData.status !== 'Approved') {
+            return res.status(403).json({ 
+                message: 'Access denied. Your account is pending Admin approval.' 
+            });
+        }
 
-        // 4. Generate JWT Token and send response (Security Placeholder)
-        // const token = generateToken(userData.user_id, userData.role);
-        // res.status(200).json({ token, role: userData.role, message: 'Login successful.' });
+        // 4. Generate JWT Token and send response
+        const token = jwt.sign(
+            { user_id: userData.user_id, role: userData.role }, 
+            process.env.JWT_SECRET, 
+            { expiresIn: '1d' }
+        );
 
-        res.status(200).json({ message: 'Login logic check successful. Credentials and approval verified.' });
+        res.status(200).json({ 
+            token, 
+            role: userData.role, 
+            message: 'Login successful.',
+            user_id: userData.user_id,
+            email: userData.email
+        });
 
     } catch (error) {
-        console.error(error);
+        console.error('POSTGRES EXECUTION ERROR IN LOGIN:', error);
         res.status(500).json({ message: 'Server error during login.' });
     }
 });
 
+
+// Middleware to protect routes and verify token
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (token == null) return res.sendStatus(401); // No token provided
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) {
+            console.error('JWT Verification Error:', err);
+            return res.sendStatus(403); // Invalid token
+        }
+        req.user = user; // user payload contains user_id and role
+        next();
+    });
+};
 
 module.exports = router;
