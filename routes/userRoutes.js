@@ -1,4 +1,4 @@
-// routes/userRoutes.js
+// daily-work-tracker-backend/routes/userRoutes.js
 
 const express = require("express");
 const router = express.Router();
@@ -8,40 +8,20 @@ const {
   getUserProfile,
   updateUserProfile,
   getAllUsers,
+  deleteUser,
 } = require("../controllers/userController");
+const { authenticateToken, authorizeAdmin } = require("../middleware/authMiddleware");
 
-// ✅ Use correct middleware file (auth.js)
-const { authenticateToken, authorizeRoles } = require("../middleware/auth");
-
-// ----------------------------------------
-// Public Routes (No Auth Required)
-// ----------------------------------------
-
-// User registration
+// ---------------- AUTH ROUTES ----------------
 router.post("/register", registerUser);
-
-// User login
 router.post("/login", loginUser);
 
-// ----------------------------------------
-// Protected Routes (Auth Required)
-// ----------------------------------------
+// ---------------- USER PROFILE ROUTES ----------------
+router.get("/profile", authenticateToken, getUserProfile);
+router.put("/profile", authenticateToken, updateUserProfile);
 
-// Get logged-in user's profile
-router.get("/me", authenticateToken, getUserProfile);
-
-// Update logged-in user's profile
-router.put("/me", authenticateToken, updateUserProfile);
-
-// ----------------------------------------
-// Admin Routes (Only accessible to Admin users)
-// ----------------------------------------
-
-router.get(
-  "/admin/all",
-  authenticateToken,
-  authorizeRoles("Admin"),
-  getAllUsers
-);
+// ---------------- ADMIN ROUTES ----------------
+router.get("/", authenticateToken, authorizeAdmin, getAllUsers);
+router.delete("/:id", authenticateToken, authorizeAdmin, deleteUser);
 
 module.exports = router;
