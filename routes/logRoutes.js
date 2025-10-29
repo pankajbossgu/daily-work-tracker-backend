@@ -1,12 +1,18 @@
+// routes/logRoutes.js
 const express = require("express");
 const router = express.Router();
-const { addLog, getUserLogs, updateLog, deleteLog } = require("../controllers/logController");
-const authMiddleware = require("../middleware/authMiddleware");
+const {
+  addLog,
+  getUserLogs,
+  updateLog,
+  deleteLog,
+} = require("../controllers/logController");
+const { protect } = require("../middleware/auth");
 
-// Protected routes
-router.post("/", authMiddleware, addLog);
-router.get("/", authMiddleware, getUserLogs);
-router.put("/:id", authMiddleware, updateLog);
-router.delete("/:id", authMiddleware, deleteLog);
+// ✅ Logged-in user routes
+router.post("/", protect, addLog);
+router.get("/", protect, getUserLogs);
+router.put("/:id", protect, updateLog);
+router.delete("/:id", protect, deleteLog);
 
 module.exports = router;
