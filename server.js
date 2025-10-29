@@ -1,29 +1,20 @@
+// daily-work-tracker-backend/server.js (or index.js)
+
 const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
+const userRoutes = require('./routes/userRoutes'); 
+// NEW IMPORT
+const adminRoutes = require('./routes/adminRoutes'); // <--- IMPORT NEW FILE
+// ... other imports ...
 
 const app = express();
-// HARDCODED FIX: Use port 3005 to avoid conflict with React's default 3000
-const port = 3005; 
+// ... middleware ...
 
-const db = require('./db');
-
-const userRoutes = require('./routes/userRoutes');
-const logRoutes = require('./routes/logRoutes'); 
-
-app.use(cors({
-    origin: 'http://localhost:3001' 
-}));
-
-app.use(express.json()); 
-
-app.get('/', (req, res) => {
-    res.send('Daily Work Tracker Backend API is running.');
-});
-
+// Route for User Authentication (login/register)
 app.use('/api/users', userRoutes); 
-app.use('/api/logs', logRoutes); 
 
-app.listen(port, () => {
-    console.log(`Server is listening on port ${port}`);
-});
+// NEW: Route for Admin Functions
+app.use('/api/admin', adminRoutes); // <--- MOUNTS AT /api/admin/users
+
+// app.use('/api/logs', logRoutes); // Keep log routes mounted here
+
+// ... rest of the file ...
