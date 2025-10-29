@@ -30,11 +30,11 @@ router.post('/register', async (req, res) => {
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
         // 3. Create a new user entry
-        // Default role is 'Employee', and is_approved is set to FALSE (pending)
+        // Default role is 'Employee', and status is set to 'Pending'
         const result = await db.query(
-            // NOTE: Changed 'status' to 'is_approved' here, which is the likely fix
-            'INSERT INTO users (email, password_hash, role, is_approved) VALUES ($1, $2, $3, $4) RETURNING user_id',
-            [email, passwordHash, 'Employee', false] // Set is_approved to false
+            // **FIX: Using 'status' column to match your database schema**
+            'INSERT INTO users (email, password_hash, role, status) VALUES ($1, $2, $3, $4) RETURNING user_id',
+            [email, passwordHash, 'Employee', 'Pending'] // Status is 'Pending'
         );
 
         // Successful registration, pending approval
@@ -75,7 +75,7 @@ router.post('/login', async (req, res) => {
         }
 
         // 3. Check for Admin Approval (YOUR CORE REQUIREMENT)
-        if (!userData.is_approved) { // Check if the boolean flag is FALSE
+        if (userData.status !== 'Approved') { // **FIX: Checking the 'status' column**
             return res.status(403).json({ 
                 message: 'Access denied. Your account is pending Admin approval.' 
             });
